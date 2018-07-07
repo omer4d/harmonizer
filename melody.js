@@ -234,8 +234,16 @@ function playChord(scale, chord) {
 
 
 var lastChord = null;
-var keyboard = new Keyboard(['w', 'b', 'w', 'b', 'w', 'w', 'b', 'w', 'b', 'w', 'b', 'w'], 52, 5+7, 20, 60);
+var opts = new KeyboardOptions();
+opts.pressable = false;
+var keyboard = new Keyboard(opts);
 keyboard.show();
+keyboard.onKeyDown = function(kb, idx) {
+	synth.noteOn(idx);
+};
+keyboard.onKeyUp = function(kb, idx) {
+	synth.noteOff(idx);
+};
 
 function handleButton(event) {
 	var vals = event.target.value.split(",").map(function(x) { return parseInt(x); });

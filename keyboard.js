@@ -70,13 +70,24 @@ function whiteKeyIndex(layout, n) {
 	return i - 1;
 }
 
-function drawLayout(svg, layout, n, offs, kw, kh) {
+function initLayout(svg, options, mouseDownHandler, mouseUpHandler) {
+	var layout = options.layout;
+	var n = options.keyNum;
+	var offs = options.keyOffs;
+	var kw = options.keyWidth;
+	var kh = options.keyHeight;
 	var keyElements = {};
 	
 	for(var i = 0; i < n; ++i) {
 		var e = svg.rectfill(kw * i, 0, kw * (i + 1), kh, "white", "black");
 		e.originalFillColor = "white";
-		keyElements[whiteKeyIndex(layout, i + offs)] = e;
+		e.keyIndex = whiteKeyIndex(layout, i + offs);
+		
+		if(mouseDownHandler)
+			e.addEventListener("mousedown", mouseDownHandler, false);
+		
+		//e.addEventListener("mouseup", mouseUpHandler, false);
+		keyElements[e.keyIndex] = e;
 	}
 	
 	var x = 0;
@@ -95,6 +106,12 @@ function drawLayout(svg, layout, n, offs, kw, kh) {
 		else {
 			var e = svg.rectfill(x - bkw / 2, 0, x + bkw / 2, kh * 0.6, "rgb(64, 64, 64)", "black");
 			e.originalFillColor = "black";
+			e.keyIndex = i;
+			
+			if(mouseDownHandler)
+				e.addEventListener("mousedown", mouseDownHandler, false);
+			
+			//e.addEventListener("mouseup", mouseUpHandler, false);
 			keyElements[i] = e;
 		}
 		++i;
@@ -103,9 +120,52 @@ function drawLayout(svg, layout, n, offs, kw, kh) {
 	return keyElements;
 }
 
-function Keyboard(layout, keyNum, keyOffs, keyWidth, keyHeight) {
-	this.svg = new SVG(keyWidth * keyNum, keyHeight);
-	this.keyElements = drawLayout(this.svg, layout, keyNum, keyOffs, keyWidth, keyHeight);
+function KeyboardOptions() {
+		this.layout = ['w', 'b', 'w', 'b', 'w', 'w', 'b', 'w', 'b', 'w', 'b', 'w'];
+		this.keyNum = 52;
+		this.keyOffs = 5+7;
+		this.keyWidth = 20;
+		this.keyHeight = 60;
+		this.pressable = true;
+}
+
+function Keyboard(options) {
+	options = options || new KeyboardOptions();
+	
+	var self = this;
+	var lastPressedKey = -1;
+	
+	var mouseDown = function(e) {
+		self.keyDown(e.target.keyIndex);
+		
+		if(self.onKeyDown)
+			self.onKeyDown(self, e.target.keyIndex);
+		
+		lastPressedKey = e.target.keyIndex;
+		//console.log("down", e.target.keyIndex);
+	};
+	
+	//var mouseUp = function(e) {
+		//self.keyUp(e.target.keyIndex);
+		//console.log("up", e.target.keyIndex);
+	//};
+	
+	if(options.pressable) {
+		document.addEventListener("mouseup", function() {
+			if(lastPressedKey < 0)
+				return;
+			
+			self.keyUp(lastPressedKey);
+			
+			if(self.onKeyUp)
+				self.onKeyUp(self, lastPressedKey);
+			
+			lastPressedKey = -1;
+		}, false);
+	}
+	
+	this.svg = new SVG(options.keyWidth * options.keyNum, options.keyHeight);
+	this.keyElements = initLayout(this.svg, options, options.pressable ? mouseDown : null);
 	
 	/*
 	var elems = this.keyElements;
